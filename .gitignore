@@ -1,5 +1,8 @@
-# Created by https://www.toptal.com/developers/gitignore/api/git,vim,macos,visualstudiocode,go
-# Edit at https://www.toptal.com/developers/gitignore?templates=git,vim,macos,visualstudiocode,go
+# Created by https://www.toptal.com/developers/gitignore/api/git,vim,macos,visualstudiocode,go,dotenv
+# Edit at https://www.toptal.com/developers/gitignore?templates=git,vim,macos,visualstudiocode,go,dotenv
+
+### dotenv ###
+.env
 
 ### Git ###
 # Created by git for backups. To disable backups in Git:
@@ -112,4 +115,4 @@ tags
 .history
 .ionide
 
-# End of https://www.toptal.com/developers/gitignore/api/git,vim,macos,visualstudiocode,go
+# End of https://www.toptal.com/developers/gitignore/api/git,vim,macos,visualstudiocode,go,dotenv

@@ -1,23 +1,29 @@
 package main
 
 import (
+	"context"
+	"laughing-goggles/config"
 	"laughing-goggles/handlers"
 	"log/slog"
 	"net/http"
 )
 
 func main() {
-	slog.Info("starting ..")
+	ctx := context.Background()
+	cfg := config.Init()
+
+	logr := cfg.Logger()
+	logr.InfoContext(ctx, "starting ..")
 
 	handler := handlers.NewHandler()
 	server := &http.Server{
-		Addr:    ":8080", // TODO: move this to env var
+		Addr:    cfg.Addr,
 		Handler: handler,
 	}
 
 	if err := server.ListenAndServe(); err != nil {
-		slog.Error("server error", slog.Any("error", err))
+		logr.ErrorContext(ctx, "server error", slog.Any("error", err))
 	}
 
-	slog.Info("stopping ..")
+	logr.InfoContext(ctx, "stopping ..")
 }
