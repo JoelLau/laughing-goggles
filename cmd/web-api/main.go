@@ -6,6 +6,7 @@ import (
 	"laughing-goggles/handlers"
 	"log/slog"
 	"net/http"
+	"time"
 )
 
 func main() {
@@ -17,8 +18,9 @@ func main() {
 
 	handler := handlers.NewHandler()
 	server := &http.Server{
-		Addr:    cfg.Addr,
-		Handler: handler,
+		Addr:              cfg.Addr,
+		Handler:           handler,
+		ReadHeaderTimeout: 10 * time.Second,
 	}
 
 	if err := server.ListenAndServe(); err != nil {

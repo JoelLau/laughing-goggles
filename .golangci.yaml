@@ -1,0 +1,35 @@
+version: "2"
+
+linters:
+  default: none
+  enable:
+    # correctness
+    - errcheck
+    - staticcheck
+    - ineffassign
+    - unused
+    # style
+    - govet
+    # security
+    - gosec
+    # bugs
+    - bodyclose
+    - noctx
+    # testing
+    - paralleltest
+
+  settings:
+    errcheck:
+      check-type-assertions: true
+    gosec:
+      severity: medium
+
+  exclusions:
+    rules:
+      - path: .*_test\.go
+        linters: [gosec, errcheck, noctx]
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
