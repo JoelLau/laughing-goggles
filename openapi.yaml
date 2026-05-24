@@ -1,0 +1,156 @@
+openapi: "3.0.3"
+info:
+  version: 1.0.0
+  title: User Analytics Service REST API
+
+paths:
+  /api/livez:
+    get:
+      operationId: Livez
+      description: liveness check - checks if process is deadlocked
+      responses:
+        "200":
+          description: process is running fine
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: string
+              example:
+                data: "ok"
+
+  /api/readyz:
+    get:
+      operationId: Readyz
+      description: readiness check - checks if process can handle traffic (also considers downstream dependencies)
+      responses:
+        "200":
+          description: process is ready to handle traffic
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: string
+              example:
+                data: "ok"
+        "500":
+          description: process is not ready (downstream dependency unavailable)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                type: "https://github.com/JoelLau/user-analytics-service/errors/database-unavailable"
+                title: "Service Unavailable"
+                status: 500
+                detail: "database is not reachable"
+
+  /api/v1/accounts:
+    post:
+      operationId: CreateAccount
+      description: >
+        create account with an initial balance
+      responses:
+        "201":
+          description: account created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      initial_balance:
+                        type: string
+              example:
+                data:
+                  id: "acc_abc123"
+                  initial_balance: "100.00"
+        "400":
+          description: bad request - invalid or missing fields
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                missing_field:
+                  summary: missing required field
+                  value:
+                    type: "https://github.com/JoelLau/laughing-goggles/errors/missing-field"
+                    title: "Bad Request"
+                    status: 400
+                    detail: "request body is missing required field 'initial_balance'"
+                negative_initial_balance:
+                  summary: negative initial balance
+                  value:
+                    type: "https://github.com/JoelLau/laughing-goggles/errors/negative-initial-balance"
+                    title: "Bad Request"
+                    status: 400
+                    detail: "initial_balance must be a positive numeric string (e.g. \"10.00\")"
+                invalid_initial_balance:
+                  summary: non-numeric initial balance
+                  value:
+                    type: "https://github.com/JoelLau/laughing-goggles/errors/invalid-initial-balance"
+                    title: "Bad Request"
+                    status: 400
+                    detail: "initial_balance must be a numeric string (e.g. \"10.00\"), got \"abc\""
+        "409":
+          description: conflict - account already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                type: "https://github.com/JoelLau/laughing-goggles/errors/account-already-exists"
+                title: "Conflict"
+                status: 409
+                detail: "an account with this id already exists"
+        "500":
+          description: internal server error - failed to create account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                type: "https://github.com/JoelLau/laughing-goggles/errors/internal-server-error"
+                title: "Internal Server Error"
+                status: 500
+                detail: "failed to create account"
+
+components:
+  schemas:
+    ErrorResponse: # loosely based on RFC9457
+      type: object
+      required:
+        - type
+        - title
+        - status
+      properties:
+        type:
+          type: string
+          format: uri
+          description: A URI reference that identifies the problem type.
+        title:
+          type: string
+          description: A short, human-readable summary of the problem.
+        status:
+          type: integer
+          description: The HTTP status code generated for this occurrence.
+        detail:
+          type: string
+          description: A human-readable explanation specific to this occurrence.
+        instance:
+          type: string
+          format: uri
+          description: A URI reference for this specific occurrence (e.g. trace ID).
