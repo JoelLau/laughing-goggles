@@ -6,9 +6,9 @@ import (
 )
 
 func NewLogger(debug bool) *slog.Logger {
-	level := slog.LevelWarn
+	level := slog.LevelInfo
 	if debug {
-		level = slog.LevelInfo
+		level = slog.LevelDebug
 	}
 
 	return slog.New(

@@ -17,7 +17,7 @@ func Init() Config {
 }
 
 type Config struct {
-	Addr      string `env:"ADDR"`
+	Address   string `env:"ADDRESS"`
 	DebugMode bool   `env:"DEBUG"`
 }
 

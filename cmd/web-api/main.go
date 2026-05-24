@@ -9,6 +9,7 @@ import (
 	"time"
 )
 
+// TODO: handle SIGTERM, SIGKILL
 func main() {
 	ctx := context.Background()
 	cfg := config.Init()
@@ -16,9 +17,9 @@ func main() {
 	logr := cfg.Logger()
 	logr.InfoContext(ctx, "starting ..")
 
-	handler := handlers.NewHandler()
+	handler := handlers.NewHandler(logr)
 	server := &http.Server{
-		Addr:              cfg.Addr,
+		Addr:              cfg.Address,
 		Handler:           handler,
 		ReadHeaderTimeout: 10 * time.Second,
 	}

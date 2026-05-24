@@ -3,6 +3,7 @@ package handlers_test
 import (
 	"fmt"
 	"laughing-goggles/handlers"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -14,7 +15,7 @@ func TestLivez_200OK(t *testing.T) {
 	t.Parallel()
 
 	// Arrange
-	server := httptest.NewServer(handlers.NewHandler())
+	server := httptest.NewServer(handlers.NewHandler(slog.New(slog.DiscardHandler)))
 	defer server.Close()
 
 	// Act
