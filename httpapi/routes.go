@@ -2,7 +2,7 @@ package httpapi
 
 import (
 	"encoding/json"
-	"laughing-goggles/gen/server"
+	"laughing-goggles/gen/api"
 	"log/slog"
 	"net/http"
 
@@ -13,14 +13,14 @@ import (
 
 func NewHandler(logr *slog.Logger) http.Handler {
 	serverImpl := NewServer()
-	strictHandler := server.NewStrictHandler(serverImpl, nil)
+	strictHandler := api.NewStrictHandler(serverImpl, nil)
 
 	r := chi.NewRouter()
 
 	r.Use(slogchi.New(logr))
 	r.Use(middleware.Recoverer)
 
-	server.HandlerWithOptions(strictHandler, server.ChiServerOptions{
+	api.HandlerWithOptions(strictHandler, api.ChiServerOptions{
 		BaseRouter:       r,
 		ErrorHandlerFunc: errorHandlerFunc,
 	})
@@ -31,7 +31,7 @@ func NewHandler(logr *slog.Logger) http.Handler {
 func errorHandlerFunc(w http.ResponseWriter, r *http.Request, err error) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusBadRequest)
-	_ = json.NewEncoder(w).Encode(server.ErrorResponse{
+	_ = json.NewEncoder(w).Encode(api.ErrorResponse{
 		Type:   "https://github.com/JoelLau/laughing-goggles/errors/invalid-params",
 		Title:  "Bad Request",
 		Status: http.StatusBadRequest,

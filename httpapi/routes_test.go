@@ -2,7 +2,7 @@ package httpapi_test
 
 import (
 	"fmt"
-	"laughing-goggles/gen/server"
+	"laughing-goggles/gen/api"
 	"laughing-goggles/httpapi"
 	"laughing-goggles/testutil"
 	"net/http"
@@ -52,8 +52,12 @@ func TestCreateAccount_201Created(t *testing.T) {
 	defer srv.Close()
 
 	// Act
-	reqBody := server.CreateAccountJSONRequestBody{AccountId: 123, InitialBalance: "100.00"}
-	resp, err := http.Post(fmt.Sprintf("%s/accounts", srv.URL), "application/json", testutil.MustJSON(t, reqBody))
+	reqBody := api.CreateAccountJSONRequestBody{AccountId: 123, InitialBalance: "100.23344"}
+	resp, err := http.Post(
+		fmt.Sprintf("%s/accounts", srv.URL),
+		testutil.ContentTypeJSON,
+		testutil.MustJSON(t, reqBody),
+	)
 	require.NoError(t, err)
 	defer resp.Body.Close()
 
