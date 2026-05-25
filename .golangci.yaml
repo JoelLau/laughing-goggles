@@ -1,33 +1,49 @@
 version: "2"
 
 linters:
-  default: none
+  default: standard
   enable:
     # correctness
     - errcheck
     - staticcheck
     - ineffassign
     - unused
+
     # style
     - govet
+
     # security
     - gosec
+
     # bugs
     - bodyclose
     - noctx
+
     # testing
     - paralleltest
+    - depguard
 
   settings:
     errcheck:
       check-type-assertions: true
     gosec:
       severity: medium
+    govet:
+      enable:
+        - shadow
+    depguard:
+      rules:
+        testutil:
+          deny:
+            - pkg: "laughing-goggles/testutil"
+              desc: "testutil must only be imported from test files"
+          files:
+            - "!**/*_test.go"
 
   exclusions:
     rules:
       - path: .*_test\.go
-        linters: [gosec, errcheck, noctx]
+        linters: [gosec, errcheck, noctx, bodyclose]
 
 formatters:
   enable:

@@ -13,13 +13,13 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-// AccountResponse defines model for AccountResponse.
-type AccountResponse struct {
-	// Balance account balance
-	Balance string `json:"balance"`
+// CreateAccountRequest defines model for CreateAccountRequest.
+type CreateAccountRequest struct {
+	// AccountId account unique identifier
+	AccountId int `json:"account_id"`
 
-	// Id account unique identifier
-	Id string `json:"id"`
+	// InitialBalance account opening balance
+	InitialBalance string `json:"initial_balance"`
 }
 
 // ErrorResponse defines model for ErrorResponse.
@@ -27,7 +27,7 @@ type ErrorResponse struct {
 	// Detail A human-readable explanation specific to this occurrence.
 	Detail *string `json:"detail,omitempty"`
 
-	// Instance A URI reference to the resource involved in this error (e.g. "/v1/accounts/123").
+	// Instance A URI reference to the resource involved in this error (e.g. "/accounts/123").
 	Instance *string `json:"instance,omitempty"`
 
 	// Status The HTTP status code generated for this occurrence.
@@ -40,16 +40,8 @@ type ErrorResponse struct {
 	Type string `json:"type"`
 }
 
-// CreateAccountJSONBody defines parameters for CreateAccount.
-type CreateAccountJSONBody struct {
-	Data *struct {
-		Id             string `json:"id"`
-		InitialBalance string `json:"initial_balance"`
-	} `json:"data,omitempty"`
-}
-
 // CreateAccountJSONRequestBody defines body for CreateAccount for application/json ContentType.
-type CreateAccountJSONRequestBody CreateAccountJSONBody
+type CreateAccountJSONRequestBody = CreateAccountRequest
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
@@ -268,18 +260,12 @@ type CreateAccountResponseObject interface {
 	VisitCreateAccountResponse(w http.ResponseWriter) error
 }
 
-type CreateAccount201JSONResponse AccountResponse
+type CreateAccount201Response struct {
+}
 
-func (response CreateAccount201JSONResponse) VisitCreateAccountResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
+func (response CreateAccount201Response) VisitCreateAccountResponse(w http.ResponseWriter) error {
 	w.WriteHeader(201)
-	_, err := buf.WriteTo(w)
-	return err
+	return nil
 }
 
 type CreateAccount400JSONResponse ErrorResponse

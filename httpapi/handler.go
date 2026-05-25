@@ -1,4 +1,4 @@
-package handlers
+package httpapi
 
 import (
 	"context"
@@ -19,12 +19,13 @@ func (s *Server) Livez(ctx context.Context, request server.LivezRequestObject) (
 }
 
 // (GET /readyz)
+//
+// TODO: ping live database
 func (s *Server) Readyz(ctx context.Context, request server.ReadyzRequestObject) (server.ReadyzResponseObject, error) {
-	// TODO: ping live database
 	return server.Readyz200JSONResponse{Data: "ok"}, nil
 }
 
 // (POST /accounts)
 func (s *Server) CreateAccount(ctx context.Context, request server.CreateAccountRequestObject) (server.CreateAccountResponseObject, error) {
-	return server.CreateAccount201JSONResponse{}, nil
+	return server.CreateAccount201Response{}, nil
 }

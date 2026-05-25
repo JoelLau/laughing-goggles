@@ -63,15 +63,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              required:
-                - account_id
-                - initial_balance
-              properties:
-                account_id:
-                  type: integer
-                initial_balance:
-                  type: string
+              $ref: "#/components/schemas/CreateAccountRequest"
             example:
               account_id: 123
               initial_balance: "100.23344"
@@ -133,6 +125,21 @@ paths:
 
 components:
   schemas:
+    CreateAccountRequest:
+      type: object
+      required:
+        - account_id
+        - initial_balance
+      properties:
+        account_id:
+          type: integer
+          description: account unique identifier
+          example: 123
+        initial_balance:
+          type: string
+          description: account opening balance
+          example: "100.23344"
+
     AccountResponse:
       type: object
       required:

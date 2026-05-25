@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"laughing-goggles/config"
-	"laughing-goggles/handlers"
+	"laughing-goggles/httpapi"
 	"log/slog"
 	"net/http"
 	"time"
@@ -17,7 +17,7 @@ func main() {
 	logr := cfg.Logger()
 	logr.InfoContext(ctx, "starting ..")
 
-	handler := handlers.NewHandler(logr)
+	handler := httpapi.NewHandler(logr)
 	server := &http.Server{
 		Addr:              cfg.Address,
 		Handler:           handler,
