@@ -16,9 +16,11 @@ func NewServer(svc AccountsService) *Server {
 type AccountsService interface {
 	CreateAccount(CreateAccountParams) (Account, error)
 	GetAccountByID(id int64) (Account, error)
+	CreateTransaction(CreateTransactionParams) error
 }
 
 type CreateAccountParams = account.CreateAccountParams
+type CreateTransactionParams = account.CreateTransactionParams
 
 type Account = account.Account
 

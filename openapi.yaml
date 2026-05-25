@@ -57,6 +57,8 @@ paths:
     post:
       operationId: CreateAccount
       description: create account with an initial balance
+      tags:
+        - accounts
       requestBody:
         description: account ID and initial balance to create the account with
         required: true
@@ -127,6 +129,8 @@ paths:
     get:
       operationId: GetAccountByID
       description: returns the account and its balance
+      tags:
+        - accounts
       parameters:
         - name: account_id
           description: id of account you're attempting to fetch
@@ -172,6 +176,82 @@ paths:
                 detail: "failed to get account"
                 instance: "/accounts"
 
+  /transactions:
+    post:
+      operationId: CreateTransaction
+      description: transfer money from source to destination account
+      tags:
+        - accounts
+      requestBody:
+        description: transaction details
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTransactionRequest"
+            example:
+              source_account_id: 123
+              amount: "100.12345"
+              destination_account_id: 456
+      responses:
+        "200":
+          description: account created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: string
+              example:
+                data: "ok"
+        "400":
+          description: bad request - invalid or missing fields
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                negative_amount:
+                  summary: negative amount
+                  value:
+                    type: "https://github.com/JoelLau/laughing-goggles/errors/negative-amount"
+                    title: "Bad Request"
+                    status: 400
+                    detail: "amount must be a positive numeric string (e.g. \"10.00\")"
+                invalid_amount:
+                  summary: non-numeric amount
+                  value:
+                    type: "https://github.com/JoelLau/laughing-goggles/errors/invalid-amount"
+                    title: "Bad Request"
+                    status: 400
+                    detail: "amount must be a numeric string (e.g. \"10.00\"), got \"abc\""
+        "404":
+          description: account not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                    type: "https://github.com/JoelLau/laughing-goggles/errors/account-not-found"
+                    title: "Not Found"
+                    status: 404
+                    detail: "no account with id \"123\""
+        "500":
+          description: internal server error - failed to create transaction
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                type: "https://github.com/JoelLau/laughing-goggles/errors/internal-server-error"
+                title: "Internal Server Error"
+                status: 500
+                detail: "failed to create transaction"
+                instance: "/transactions"
+
 components:
   schemas:
     CreateAccountRequest:
@@ -189,6 +269,28 @@ components:
           type: string
           description: account opening balance
           example: "100.23344"
+
+    CreateTransactionRequest:
+      type: object
+      required:
+        - source_account_id
+        - amount
+        - destination_account_id
+      properties:
+        source_account_id:
+          type: integer
+          x-go-type: int64
+          description: account funds will be deducted from
+          example: 123
+        amount:
+          type: string
+          description: amount to transafer
+          example: "100.12345"
+        destination_account_id:
+          type: integer
+          x-go-type: int64
+          description: account funds will be transferred to
+          example: 456
 
     AccountResponse:
       type: object

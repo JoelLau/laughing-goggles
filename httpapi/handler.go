@@ -97,3 +97,59 @@ func (s *Server) GetAccountByID(ctx context.Context, request api.GetAccountByIDR
 		Balance:   acc.Balance.String(),
 	}, nil
 }
+
+// (POST /transactions)
+func (s *Server) CreateTransaction(ctx context.Context, request api.CreateTransactionRequestObject) (api.CreateTransactionResponseObject, error) {
+	amount, err := decimal.NewFromString(request.Body.Amount)
+	if err != nil {
+		return api.CreateTransaction400JSONResponse{
+			Type:   "https://github.com/JoelLau/laughing-goggles/errors/invalid-amount",
+			Title:  "Bad Request",
+			Status: http.StatusBadRequest,
+			Detail: new(fmt.Sprintf("amount must be a numeric string (e.g. \"10.00\"), got %q", request.Body.Amount)),
+		}, nil
+	}
+
+	err = s.accSvc.CreateTransaction(account.CreateTransactionParams{
+		SourceAccountID:      request.Body.SourceAccountId,
+		DestinationAccountID: request.Body.DestinationAccountId,
+		Amount:               amount,
+	})
+	if errors.Is(err, account.ErrAmountNotPositive) {
+		return api.CreateTransaction400JSONResponse{
+			Type:   "https://github.com/JoelLau/laughing-goggles/errors/negative-amount",
+			Title:  "Bad Request",
+			Status: http.StatusBadRequest,
+			Detail: new("amount must be a positive numeric string (e.g. \"10.00\")"),
+		}, nil
+	}
+	if errors.Is(err, account.ErrInsufficientBalance) {
+		return api.CreateTransaction400JSONResponse{
+			Type:   "https://github.com/JoelLau/laughing-goggles/errors/insufficient-balance",
+			Title:  "Bad Request",
+			Status: http.StatusBadRequest,
+			Detail: new("source account has insufficient balance"),
+		}, nil
+	}
+	if errors.Is(err, account.ErrAccountNotFound) {
+		return api.CreateTransaction404JSONResponse{
+			Type:   "https://github.com/JoelLau/laughing-goggles/errors/account-not-found",
+			Title:  "Not Found",
+			Status: http.StatusNotFound,
+			Detail: new(err.Error()),
+		}, nil
+	}
+	if err != nil {
+		return api.CreateTransaction500JSONResponse{
+			Type:     "https://github.com/JoelLau/laughing-goggles/errors/internal-server-error",
+			Title:    "Internal Server Error",
+			Status:   http.StatusInternalServerError,
+			Detail:   new("failed to create transaction"),
+			Instance: new("/transactions"),
+		}, nil
+	}
+
+	return api.CreateTransaction200JSONResponse{
+		Data: "ok",
+	}, nil
+}
