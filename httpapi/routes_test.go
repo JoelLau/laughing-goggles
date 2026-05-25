@@ -12,9 +12,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func newTestServer(t *testing.T) *httptest.Server {
+func newTestServer(t *testing.T, svc httpapi.AccountsService) *httptest.Server {
 	t.Helper()
-	srv := httptest.NewServer(httpapi.NewHandler(testutil.DiscardLogger, account.NewAccountService()))
+	srv := httptest.NewServer(httpapi.NewHandler(testutil.DiscardLogger, svc))
 	t.Cleanup(srv.Close)
 	return srv
 }
@@ -23,7 +23,7 @@ func TestLivez_200OK(t *testing.T) {
 	t.Parallel()
 
 	// Arrange
-	srv := newTestServer(t)
+	srv := newTestServer(t, account.NewAccountService())
 
 	// Act
 	resp, err := http.Get(fmt.Sprintf("%s/livez", srv.URL))
@@ -38,7 +38,7 @@ func TestReadyz_200OK(t *testing.T) {
 	t.Parallel()
 
 	// Arrange
-	srv := newTestServer(t)
+	srv := newTestServer(t, account.NewAccountService())
 
 	// Act
 	resp, err := http.Get(fmt.Sprintf("%s/readyz", srv.URL))

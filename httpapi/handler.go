@@ -35,7 +35,7 @@ func (s *Server) CreateAccount(ctx context.Context, request api.CreateAccountReq
 		}, nil
 	}
 
-	acc, err := s.accSvc.CreateAccount(account.CreateAccountParams{
+	acc, err := s.accSvc.CreateAccount(CreateAccountParams{
 		AccountID:      request.Body.AccountId,
 		InitialBalance: initialBalance,
 	})
@@ -67,6 +67,32 @@ func (s *Server) CreateAccount(ctx context.Context, request api.CreateAccountReq
 	}
 
 	return api.CreateAccount201JSONResponse{
+		AccountId: acc.ID,
+		Balance:   acc.Balance.String(),
+	}, nil
+}
+
+// (GET /accounts/{account_id})
+func (s *Server) GetAccountByID(ctx context.Context, request api.GetAccountByIDRequestObject) (api.GetAccountByIDResponseObject, error) {
+	acc, err := s.accSvc.GetAccountByID(request.AccountId)
+	if errors.Is(err, account.ErrAccountNotFound) {
+		return api.GetAccountByID404JSONResponse{
+			Type:   "https://github.com/JoelLau/laughing-goggles/errors/account-not-found",
+			Title:  "Not Found",
+			Status: http.StatusNotFound,
+			Detail: new(fmt.Sprintf("no account with id %d", request.AccountId)),
+		}, nil
+	}
+	if err != nil {
+		return api.GetAccountByID500JSONResponse{
+			Type:   "https://github.com/JoelLau/laughing-goggles/errors/internal-server-error",
+			Title:  "Internal Server Error",
+			Status: http.StatusInternalServerError,
+			Detail: new("failed to get account"),
+		}, nil
+	}
+
+	return api.GetAccountByID200JSONResponse{
 		AccountId: acc.ID,
 		Balance:   acc.Balance.String(),
 	}, nil

@@ -1,7 +1,7 @@
 openapi: "3.0.3"
 info:
   version: 1.0.0
-  title: User Analytics Service REST API
+  title: Transfers Service REST API
 
 paths:
   /livez:
@@ -84,13 +84,6 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
               examples:
-                missing_field:
-                  summary: missing required field
-                  value:
-                    type: "https://github.com/JoelLau/laughing-goggles/errors/missing-field"
-                    title: "Bad Request"
-                    status: 400
-                    detail: "request body is missing required field 'initial_balance'"
                 negative_initial_balance:
                   summary: negative initial balance
                   value:
@@ -128,6 +121,55 @@ paths:
                 title: "Internal Server Error"
                 status: 500
                 detail: "failed to create account"
+                instance: "/accounts"
+
+  /accounts/{account_id}:
+    get:
+      operationId: GetAccountByID
+      description: returns the account and its balance
+      parameters:
+        - name: account_id
+          description: id of account you're attempting to fetch
+          in: path 
+          required: true
+          schema:
+            type: integer
+            x-go-type: int64
+      responses:
+        "200":
+          description: successfully retrieved account and its balance
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountResponse"
+              example:
+                account_id: 123
+                balance: "100.23344"
+        "404":
+          description: account not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                account_not_found:
+                  summary: account not found
+                  value:
+                    type: "https://github.com/JoelLau/laughing-goggles/errors/account-not-found"
+                    title: "Not Found"
+                    status: 404
+                    detail: "no account with id \"123\""
+        "500":
+          description: internal server error - failed to get account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                type: "https://github.com/JoelLau/laughing-goggles/errors/internal-server-error"
+                title: "Internal Server Error"
+                status: 500
+                detail: "failed to get account"
                 instance: "/accounts"
 
 components:

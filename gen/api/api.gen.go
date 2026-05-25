@@ -11,6 +11,7 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/oapi-codegen/runtime"
 )
 
 // AccountResponse defines model for AccountResponse.
@@ -58,6 +59,9 @@ type ServerInterface interface {
 	// (POST /accounts)
 	CreateAccount(w http.ResponseWriter, r *http.Request)
 
+	// (GET /accounts/{account_id})
+	GetAccountByID(w http.ResponseWriter, r *http.Request, accountId int64)
+
 	// (GET /livez)
 	Livez(w http.ResponseWriter, r *http.Request)
 
@@ -71,6 +75,11 @@ type Unimplemented struct{}
 
 // (POST /accounts)
 func (_ Unimplemented) CreateAccount(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (GET /accounts/{account_id})
+func (_ Unimplemented) GetAccountByID(w http.ResponseWriter, r *http.Request, accountId int64) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -98,6 +107,32 @@ func (siw *ServerInterfaceWrapper) CreateAccount(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CreateAccount(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAccountByID operation middleware
+func (siw *ServerInterfaceWrapper) GetAccountByID(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "account_id" -------------
+	var accountId int64
+
+	err = runtime.BindStyledParameterWithOptions("simple", "account_id", chi.URLParam(r, "account_id"), &accountId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "account_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAccountByID(w, r, accountId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -252,6 +287,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/accounts", wrapper.CreateAccount)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/accounts/{account_id}", wrapper.GetAccountByID)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/livez", wrapper.Livez)
 	})
 	r.Group(func(r chi.Router) {
@@ -314,6 +352,56 @@ func (response CreateAccount409JSONResponse) VisitCreateAccountResponse(w http.R
 type CreateAccount500JSONResponse ErrorResponse
 
 func (response CreateAccount500JSONResponse) VisitCreateAccountResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetAccountByIDRequestObject struct {
+	AccountId int64 `json:"account_id"`
+}
+
+type GetAccountByIDResponseObject interface {
+	VisitGetAccountByIDResponse(w http.ResponseWriter) error
+}
+
+type GetAccountByID200JSONResponse AccountResponse
+
+func (response GetAccountByID200JSONResponse) VisitGetAccountByIDResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetAccountByID404JSONResponse ErrorResponse
+
+func (response GetAccountByID404JSONResponse) VisitGetAccountByIDResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetAccountByID500JSONResponse ErrorResponse
+
+func (response GetAccountByID500JSONResponse) VisitGetAccountByIDResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -391,6 +479,9 @@ type StrictServerInterface interface {
 	// (POST /accounts)
 	CreateAccount(ctx context.Context, request CreateAccountRequestObject) (CreateAccountResponseObject, error)
 
+	// (GET /accounts/{account_id})
+	GetAccountByID(ctx context.Context, request GetAccountByIDRequestObject) (GetAccountByIDResponseObject, error)
+
 	// (GET /livez)
 	Livez(ctx context.Context, request LivezRequestObject) (LivezResponseObject, error)
 
@@ -451,6 +542,32 @@ func (sh *strictHandler) CreateAccount(w http.ResponseWriter, r *http.Request) {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(CreateAccountResponseObject); ok {
 		if err := validResponse.VisitCreateAccountResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetAccountByID operation middleware
+func (sh *strictHandler) GetAccountByID(w http.ResponseWriter, r *http.Request, accountId int64) {
+	var request GetAccountByIDRequestObject
+
+	request.AccountId = accountId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetAccountByID(ctx, request.(GetAccountByIDRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetAccountByID")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetAccountByIDResponseObject); ok {
+		if err := validResponse.VisitGetAccountByIDResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
