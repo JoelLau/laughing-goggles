@@ -4,7 +4,7 @@ info:
   title: User Analytics Service REST API
 
 paths:
-  /api/livez:
+  /livez:
     get:
       operationId: Livez
       description: liveness check - checks if process is deadlocked
@@ -23,7 +23,7 @@ paths:
               example:
                 data: "ok"
 
-  /api/readyz:
+  /readyz:
     get:
       operationId: Readyz
       description: readiness check - checks if process can handle traffic (also considers downstream dependencies)
@@ -48,35 +48,36 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
               example:
-                type: "https://github.com/JoelLau/user-analytics-service/errors/database-unavailable"
+                type: "https://github.com/JoelLau/laughing-goggles/errors/database-unavailable"
                 title: "Service Unavailable"
                 status: 500
                 detail: "database is not reachable"
 
-  /api/v1/accounts:
+  /accounts:
     post:
       operationId: CreateAccount
-      description: >
-        create account with an initial balance
+      description: create account with an initial balance
+      requestBody:
+        description: account ID and initial balance to create the account with
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - account_id
+                - initial_balance
+              properties:
+                account_id:
+                  type: integer
+                initial_balance:
+                  type: string
+            example:
+              account_id: 123
+              initial_balance: "100.23344"
       responses:
         "201":
           description: account created successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data:
-                    type: object
-                    properties:
-                      id:
-                        type: string
-                      initial_balance:
-                        type: string
-              example:
-                data:
-                  id: "acc_abc123"
-                  initial_balance: "100.00"
         "400":
           description: bad request - invalid or missing fields
           content:
@@ -115,7 +116,8 @@ paths:
                 type: "https://github.com/JoelLau/laughing-goggles/errors/account-already-exists"
                 title: "Conflict"
                 status: 409
-                detail: "an account with this id already exists"
+                detail: "account with id \"123\" already exists"
+                instance: "/accounts/123"
         "500":
           description: internal server error - failed to create account
           content:
@@ -127,9 +129,25 @@ paths:
                 title: "Internal Server Error"
                 status: 500
                 detail: "failed to create account"
+                instance: "/accounts"
 
 components:
   schemas:
+    AccountResponse:
+      type: object
+      required:
+        - account_id
+        - balance
+      properties:
+        account_id:
+          type: integer
+          description: account unique identifier
+          example: 123
+        balance:
+          type: string
+          description: account balance
+          example: "100.23344"
+
     ErrorResponse: # loosely based on RFC9457
       type: object
       required:
@@ -153,4 +171,4 @@ components:
         instance:
           type: string
           format: uri
-          description: A URI reference for this specific occurrence (e.g. trace ID).
+          description: A URI reference to the resource involved in this error (e.g. "/accounts/123").

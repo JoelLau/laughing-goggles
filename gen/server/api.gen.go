@@ -13,12 +13,21 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
+// AccountResponse defines model for AccountResponse.
+type AccountResponse struct {
+	// Balance account balance
+	Balance string `json:"balance"`
+
+	// Id account unique identifier
+	Id string `json:"id"`
+}
+
 // ErrorResponse defines model for ErrorResponse.
 type ErrorResponse struct {
 	// Detail A human-readable explanation specific to this occurrence.
 	Detail *string `json:"detail,omitempty"`
 
-	// Instance A URI reference for this specific occurrence (e.g. trace ID).
+	// Instance A URI reference to the resource involved in this error (e.g. "/v1/accounts/123").
 	Instance *string `json:"instance,omitempty"`
 
 	// Status The HTTP status code generated for this occurrence.
@@ -31,16 +40,27 @@ type ErrorResponse struct {
 	Type string `json:"type"`
 }
 
+// CreateAccountJSONBody defines parameters for CreateAccount.
+type CreateAccountJSONBody struct {
+	Data *struct {
+		Id             string `json:"id"`
+		InitialBalance string `json:"initial_balance"`
+	} `json:"data,omitempty"`
+}
+
+// CreateAccountJSONRequestBody defines body for CreateAccount for application/json ContentType.
+type CreateAccountJSONRequestBody CreateAccountJSONBody
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 
 	// (POST /accounts)
 	CreateAccount(w http.ResponseWriter, r *http.Request)
 
-	// (GET /api/livez)
+	// (GET /livez)
 	Livez(w http.ResponseWriter, r *http.Request)
 
-	// (GET /api/readyz)
+	// (GET /readyz)
 	Readyz(w http.ResponseWriter, r *http.Request)
 }
 
@@ -53,12 +73,12 @@ func (_ Unimplemented) CreateAccount(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// (GET /api/livez)
+// (GET /livez)
 func (_ Unimplemented) Livez(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// (GET /api/readyz)
+// (GET /readyz)
 func (_ Unimplemented) Readyz(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
@@ -231,28 +251,24 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/accounts", wrapper.CreateAccount)
 	})
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/api/livez", wrapper.Livez)
+		r.Get(options.BaseURL+"/livez", wrapper.Livez)
 	})
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/api/readyz", wrapper.Readyz)
+		r.Get(options.BaseURL+"/readyz", wrapper.Readyz)
 	})
 
 	return r
 }
 
 type CreateAccountRequestObject struct {
+	Body *CreateAccountJSONRequestBody
 }
 
 type CreateAccountResponseObject interface {
 	VisitCreateAccountResponse(w http.ResponseWriter) error
 }
 
-type CreateAccount201JSONResponse struct {
-	Data *struct {
-		Id             *string `json:"id,omitempty"`
-		InitialBalance *string `json:"initial_balance,omitempty"`
-	} `json:"data,omitempty"`
-}
+type CreateAccount201JSONResponse AccountResponse
 
 func (response CreateAccount201JSONResponse) VisitCreateAccountResponse(w http.ResponseWriter) error {
 
@@ -374,10 +390,10 @@ type StrictServerInterface interface {
 	// (POST /accounts)
 	CreateAccount(ctx context.Context, request CreateAccountRequestObject) (CreateAccountResponseObject, error)
 
-	// (GET /api/livez)
+	// (GET /livez)
 	Livez(ctx context.Context, request LivezRequestObject) (LivezResponseObject, error)
 
-	// (GET /api/readyz)
+	// (GET /readyz)
 	Readyz(ctx context.Context, request ReadyzRequestObject) (ReadyzResponseObject, error)
 }
 
@@ -413,6 +429,13 @@ type strictHandler struct {
 // CreateAccount operation middleware
 func (sh *strictHandler) CreateAccount(w http.ResponseWriter, r *http.Request) {
 	var request CreateAccountRequestObject
+
+	var body CreateAccountJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
 		return sh.ssi.CreateAccount(ctx, request.(CreateAccountRequestObject))
