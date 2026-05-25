@@ -1,0 +1,48 @@
+services:
+  laughing-goggles-db:
+    image: postgres:18-alpine
+    container_name: laughing_goggles_db
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - laughing_goggles_data:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  goose-migrations:
+    image: kukymbr/goose-docker:3.27.0
+    container_name: laughing_goggles_goose_migrations
+    environment:
+      - GOOSE_DRIVER=postgres
+      - GOOSE_DBSTRING=host=laughing-goggles-db user=${POSTGRES_USER} password=${POSTGRES_PASSWORD} dbname=${POSTGRES_DB} port=${POSTGRES_PORT} sslmode=disable
+      - GOOSE_COMMAND=up
+    volumes:
+      - ./db/migrations/:/migrations
+    depends_on:
+      laughing-goggles-db:
+        condition: service_healthy
+
+  goose-seed:
+    image: kukymbr/goose-docker:3.27.0
+    container_name: laughing_goggles_goose_seed
+    environment:
+      - GOOSE_DRIVER=postgres
+      - GOOSE_DBSTRING=host=laughing-goggles-db user=${POSTGRES_USER} password=${POSTGRES_PASSWORD} dbname=${POSTGRES_DB} port=${POSTGRES_PORT} sslmode=disable
+      - GOOSE_COMMAND=up
+      - GOOSE_EXTRA_ARGS=-no-versioning
+    volumes:
+      - ./db/seed/:/migrations
+    depends_on:
+      goose-migrations:
+        condition: service_completed_successfully
+
+volumes:
+  laughing_goggles_data:

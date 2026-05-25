@@ -2,13 +2,15 @@ package httpapi_test
 
 import (
 	"fmt"
-	"laughing-goggles/gen/api"
+	"laughing-goggles/account"
+	"laughing-goggles/api"
 	"laughing-goggles/httpapi"
 	"laughing-goggles/testutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/require"
 )
 
@@ -16,7 +18,7 @@ func TestLivez_200OK(t *testing.T) {
 	t.Parallel()
 
 	// Arrange
-	srv := httptest.NewServer(httpapi.NewHandler(testutil.DiscardLogger))
+	srv := httptest.NewServer(httpapi.NewHandler(testutil.DiscardLogger, nil))
 	defer srv.Close()
 
 	// Act
@@ -32,7 +34,7 @@ func TestReadyz_200OK(t *testing.T) {
 	t.Parallel()
 
 	// Arrange
-	srv := httptest.NewServer(httpapi.NewHandler(testutil.DiscardLogger))
+	srv := httptest.NewServer(httpapi.NewHandler(testutil.DiscardLogger, nil))
 	defer srv.Close()
 
 	// Act
@@ -48,7 +50,8 @@ func TestCreateAccount_201Created(t *testing.T) {
 	t.Parallel()
 
 	// Arrange
-	srv := httptest.NewServer(httpapi.NewHandler(testutil.DiscardLogger))
+	store := account.NewAccountRepository()
+	srv := httptest.NewServer(httpapi.NewHandler(testutil.DiscardLogger, store))
 	defer srv.Close()
 
 	// Act
@@ -63,4 +66,10 @@ func TestCreateAccount_201Created(t *testing.T) {
 
 	// Assert
 	require.Equal(t, http.StatusCreated, resp.StatusCode)
+
+	got, err := store.GetAccountByID(123)
+	require.NoError(t, err)
+
+	want := account.Account{ID: 123, Balance: decimal.RequireFromString("100.23344")}
+	require.Equal(t, want, got)
 }

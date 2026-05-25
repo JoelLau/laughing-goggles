@@ -2,16 +2,9 @@ package httpapi
 
 import (
 	"context"
-	"laughing-goggles/gen/api"
+	"laughing-goggles/api"
+	"net/http"
 )
-
-var _ api.StrictServerInterface = &Server{}
-
-func NewServer() *Server {
-	return &Server{}
-}
-
-type Server struct{}
 
 // (GET /livez)
 func (s *Server) Livez(ctx context.Context, request api.LivezRequestObject) (api.LivezResponseObject, error) {
@@ -19,13 +12,22 @@ func (s *Server) Livez(ctx context.Context, request api.LivezRequestObject) (api
 }
 
 // (GET /readyz)
-//
-// TODO: ping live database
 func (s *Server) Readyz(ctx context.Context, request api.ReadyzRequestObject) (api.ReadyzResponseObject, error) {
+	if err := s.store.Ping(ctx); err != nil {
+		return api.Readyz500JSONResponse{
+			Type:   "https://github.com/JoelLau/laughing-goggles/errors/database-unavailable",
+			Title:  "Service Unavailable",
+			Status: http.StatusInternalServerError,
+			Detail: new("database is not reachable"),
+		}, nil
+	}
+
 	return api.Readyz200JSONResponse{Data: "ok"}, nil
 }
 
 // (POST /accounts)
+//
+// TODO: implement
 func (s *Server) CreateAccount(ctx context.Context, request api.CreateAccountRequestObject) (api.CreateAccountResponseObject, error) {
 	return api.CreateAccount201Response{}, nil
 }

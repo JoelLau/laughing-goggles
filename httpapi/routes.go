@@ -2,7 +2,7 @@ package httpapi
 
 import (
 	"encoding/json"
-	"laughing-goggles/gen/api"
+	"laughing-goggles/api"
 	"log/slog"
 	"net/http"
 
@@ -11,8 +11,8 @@ import (
 	slogchi "github.com/samber/slog-chi"
 )
 
-func NewHandler(logr *slog.Logger) http.Handler {
-	serverImpl := NewServer()
+func NewHandler(logr *slog.Logger, store AccountStore) http.Handler {
+	serverImpl := NewServer(store)
 	strictHandler := api.NewStrictHandler(serverImpl, nil)
 
 	r := chi.NewRouter()
