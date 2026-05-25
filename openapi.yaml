@@ -70,6 +70,13 @@ paths:
       responses:
         "201":
           description: account created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountResponse"
+              example:
+                account_id: 123
+                balance: "100.23344"
         "400":
           description: bad request - invalid or missing fields
           content:
@@ -133,6 +140,7 @@ components:
       properties:
         account_id:
           type: integer
+          x-go-type: int64
           description: account unique identifier
           example: 123
         initial_balance:
@@ -148,6 +156,7 @@ components:
       properties:
         account_id:
           type: integer
+          x-go-type: int64
           description: account unique identifier
           example: 123
         balance:

@@ -13,10 +13,19 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
+// AccountResponse defines model for AccountResponse.
+type AccountResponse struct {
+	// AccountId account unique identifier
+	AccountId int64 `json:"account_id"`
+
+	// Balance account balance
+	Balance string `json:"balance"`
+}
+
 // CreateAccountRequest defines model for CreateAccountRequest.
 type CreateAccountRequest struct {
 	// AccountId account unique identifier
-	AccountId int `json:"account_id"`
+	AccountId int64 `json:"account_id"`
 
 	// InitialBalance account opening balance
 	InitialBalance string `json:"initial_balance"`
@@ -260,12 +269,18 @@ type CreateAccountResponseObject interface {
 	VisitCreateAccountResponse(w http.ResponseWriter) error
 }
 
-type CreateAccount201Response struct {
-}
+type CreateAccount201JSONResponse AccountResponse
 
-func (response CreateAccount201Response) VisitCreateAccountResponse(w http.ResponseWriter) error {
+func (response CreateAccount201JSONResponse) VisitCreateAccountResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(201)
-	return nil
+	_, err := buf.WriteTo(w)
+	return err
 }
 
 type CreateAccount400JSONResponse ErrorResponse

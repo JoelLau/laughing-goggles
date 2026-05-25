@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"laughing-goggles/account"
 	"laughing-goggles/config"
 	"laughing-goggles/httpapi"
 	"log/slog"
@@ -17,7 +18,7 @@ func main() {
 	logr := cfg.Logger()
 	logr.InfoContext(ctx, "starting ..")
 
-	handler := httpapi.NewHandler(logr)
+	handler := httpapi.NewHandler(logr, account.NewAccountService())
 	server := &http.Server{
 		Addr:              cfg.Address,
 		Handler:           handler,

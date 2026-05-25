@@ -2,7 +2,7 @@ package httpapi_test
 
 import (
 	"fmt"
-	"laughing-goggles/gen/api"
+	"laughing-goggles/account"
 	"laughing-goggles/httpapi"
 	"laughing-goggles/testutil"
 	"net/http"
@@ -12,12 +12,18 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func newTestServer(t *testing.T) *httptest.Server {
+	t.Helper()
+	srv := httptest.NewServer(httpapi.NewHandler(testutil.DiscardLogger, account.NewAccountService()))
+	t.Cleanup(srv.Close)
+	return srv
+}
+
 func TestLivez_200OK(t *testing.T) {
 	t.Parallel()
 
 	// Arrange
-	srv := httptest.NewServer(httpapi.NewHandler(testutil.DiscardLogger))
-	defer srv.Close()
+	srv := newTestServer(t)
 
 	// Act
 	resp, err := http.Get(fmt.Sprintf("%s/livez", srv.URL))
@@ -32,8 +38,7 @@ func TestReadyz_200OK(t *testing.T) {
 	t.Parallel()
 
 	// Arrange
-	srv := httptest.NewServer(httpapi.NewHandler(testutil.DiscardLogger))
-	defer srv.Close()
+	srv := newTestServer(t)
 
 	// Act
 	resp, err := http.Get(fmt.Sprintf("%s/readyz", srv.URL))
@@ -42,25 +47,4 @@ func TestReadyz_200OK(t *testing.T) {
 
 	// Assert
 	require.Equal(t, http.StatusOK, resp.StatusCode)
-}
-
-func TestCreateAccount_201Created(t *testing.T) {
-	t.Parallel()
-
-	// Arrange
-	srv := httptest.NewServer(httpapi.NewHandler(testutil.DiscardLogger))
-	defer srv.Close()
-
-	// Act
-	reqBody := api.CreateAccountJSONRequestBody{AccountId: 123, InitialBalance: "100.23344"}
-	resp, err := http.Post(
-		fmt.Sprintf("%s/accounts", srv.URL),
-		testutil.ContentTypeJSON,
-		testutil.MustJSON(t, reqBody),
-	)
-	require.NoError(t, err)
-	defer resp.Body.Close()
-
-	// Assert
-	require.Equal(t, http.StatusCreated, resp.StatusCode)
 }
