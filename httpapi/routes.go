@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	_ "embed"
 	"encoding/json"
 	"laughing-goggles/gen/api"
 	"log/slog"
@@ -11,6 +12,9 @@ import (
 	slogchi "github.com/samber/slog-chi"
 )
 
+//go:embed openapi.yaml
+var openapiSpec []byte
+
 func NewHandler(logr *slog.Logger, svc AccountsService) http.Handler {
 	serverImpl := NewServer(svc)
 	strictHandler := api.NewStrictHandler(serverImpl, nil)
@@ -19,6 +23,20 @@ func NewHandler(logr *slog.Logger, svc AccountsService) http.Handler {
 
 	r.Use(slogchi.New(logr))
 	r.Use(middleware.Recoverer)
+
+	r.Get("/openapi.yaml", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/yaml")
+		w.Write(openapiSpec)
+	})
+
+	r.Get("/swagger", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/swagger/", http.StatusMovedPermanently)
+	})
+
+	r.Get("/swagger/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		w.Write([]byte(`<!doctype html><html><head><title>Transfers Service API</title><meta charset="utf-8"/><link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist/swagger-ui.css"/></head><body><div id="swagger-ui"></div><script src="https://unpkg.com/swagger-ui-dist/swagger-ui-bundle.js"></script><script>SwaggerUIBundle({url:"/openapi.yaml",dom_id:"#swagger-ui"})</script></body></html>`))
+	})
 
 	api.HandlerWithOptions(strictHandler, api.ChiServerOptions{
 		BaseRouter:       r,
