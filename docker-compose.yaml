@@ -17,5 +17,18 @@ services:
       timeout: 5s
       retries: 5
 
+  goose-migrations:
+    image: kukymbr/goose-docker:3.27.0
+    container_name: laughing_goggles_goose_migrations
+    environment:
+      - GOOSE_DRIVER=postgres
+      - GOOSE_DBSTRING=host=laughing-goggles-db user=${POSTGRES_USER} password=${POSTGRES_PASSWORD} dbname=${POSTGRES_DB} port=${POSTGRES_PORT} sslmode=disable
+      - GOOSE_COMMAND=up
+    volumes:
+      - ./db/migrations/:/migrations
+    depends_on:
+      laughing-goggles-db:
+        condition: service_healthy
+
 volumes:
   laughing_goggles_data:
