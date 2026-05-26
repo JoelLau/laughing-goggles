@@ -4,7 +4,7 @@
 
 package sqlc
 
-// source of truth for all things table related
+// registry of all accounts in the system
 type Account struct {
 	// unique account identifier; chosen by user
 	ID int64 `json:"id"`

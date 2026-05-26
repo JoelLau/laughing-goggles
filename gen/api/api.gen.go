@@ -347,18 +347,12 @@ type CreateAccountResponseObject interface {
 	VisitCreateAccountResponse(w http.ResponseWriter) error
 }
 
-type CreateAccount201JSONResponse AccountResponse
+type CreateAccount201Response struct {
+}
 
-func (response CreateAccount201JSONResponse) VisitCreateAccountResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
+func (response CreateAccount201Response) VisitCreateAccountResponse(w http.ResponseWriter) error {
 	w.WriteHeader(201)
-	_, err := buf.WriteTo(w)
-	return err
+	return nil
 }
 
 type CreateAccount400JSONResponse ErrorResponse

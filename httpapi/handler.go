@@ -42,7 +42,7 @@ func (s *Server) CreateAccount(ctx context.Context, request api.CreateAccountReq
 		}, nil
 	}
 
-	acc, err := s.accSvc.CreateAccount(ctx, CreateAccountParams{
+	_, err = s.accSvc.CreateAccount(ctx, CreateAccountParams{
 		AccountID:      request.Body.AccountId,
 		InitialBalance: initialBalance,
 	})
@@ -73,10 +73,7 @@ func (s *Server) CreateAccount(ctx context.Context, request api.CreateAccountReq
 		}, nil
 	}
 
-	return api.CreateAccount201JSONResponse{
-		AccountId: acc.ID,
-		Balance:   acc.Balance.String(),
-	}, nil
+	return api.CreateAccount201Response{}, nil
 }
 
 // (GET /accounts/{account_id})

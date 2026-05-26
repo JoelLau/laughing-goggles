@@ -72,13 +72,6 @@ paths:
       responses:
         "201":
           description: account created successfully
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AccountResponse"
-              example:
-                account_id: 123
-                balance: "100.23344"
         "400":
           description: bad request - invalid or missing fields
           content:
