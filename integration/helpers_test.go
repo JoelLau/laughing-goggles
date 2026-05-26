@@ -10,12 +10,9 @@ import (
 
 func newTestServer(t *testing.T, svc *account.AccountService) *httptest.Server {
 	t.Helper()
-	srv := httptest.NewServer(
-		httpapi.NewHandler(
-			testutil.DiscardLogger,
-			svc,
-		),
-	)
+
+	srv := httptest.NewServer(httpapi.NewHandler(testutil.DiscardLogger, svc))
 	t.Cleanup(srv.Close)
+
 	return srv
 }

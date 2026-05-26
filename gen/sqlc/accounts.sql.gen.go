@@ -9,22 +9,24 @@ import (
 	"context"
 )
 
-const createAccount = `-- name: CreateAccount :exec
-INSERT INTO accounts (id)
+const createAccount = `-- name: CreateAccount :one
+INSERT INTO accounts(id)
   VALUES ($1)
 RETURNING
   id
 `
 
-func (q *Queries) CreateAccount(ctx context.Context, accountID int64) error {
-	_, err := q.db.Exec(ctx, createAccount, accountID)
-	return err
+func (q *Queries) CreateAccount(ctx context.Context, accountID int64) (int64, error) {
+	row := q.db.QueryRow(ctx, createAccount, accountID)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
 }
 
 const getAccountByID = `-- name: GetAccountByID :one
 SELECT
-  acc.id AS account_id
-  , COALESCE(SUM(ledger.amount_micro) , 0)::NUMERIC / 1000000 AS balance
+  acc.id AS account_id,
+  COALESCE(SUM(ledger.amount_micro), 0)::bigint AS balance_micros
 FROM
   accounts acc
   LEFT JOIN ledger_entries ledger ON ledger.account_id = acc.id
@@ -35,13 +37,13 @@ GROUP BY
 `
 
 type GetAccountByIDRow struct {
-	AccountID int64 `json:"account_id"`
-	Balance   int32 `json:"balance"`
+	AccountID     int64 `json:"account_id"`
+	BalanceMicros int64 `json:"balance_micros"`
 }
 
 func (q *Queries) GetAccountByID(ctx context.Context, accountID int64) (GetAccountByIDRow, error) {
 	row := q.db.QueryRow(ctx, getAccountByID, accountID)
 	var i GetAccountByIDRow
-	err := row.Scan(&i.AccountID, &i.Balance)
+	err := row.Scan(&i.AccountID, &i.BalanceMicros)
 	return i, err
 }

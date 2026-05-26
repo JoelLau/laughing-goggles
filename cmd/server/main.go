@@ -8,6 +8,8 @@ import (
 	"log/slog"
 	"net/http"
 	"time"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // TODO: handle SIGTERM, SIGKILL
@@ -18,7 +20,14 @@ func main() {
 	logr := cfg.Logger()
 	logr.InfoContext(ctx, "starting ..")
 
-	handler := httpapi.NewHandler(logr, account.NewAccountService())
+	pool, err := pgxpool.New(ctx, cfg.Address)
+	if err != nil {
+		logr.ErrorContext(ctx, "failed to connect to database", slog.Any("error", err))
+		return
+	}
+
+	svc := account.NewAccountService(pool)
+	handler := httpapi.NewHandler(logr, svc)
 	server := &http.Server{
 		Addr:              cfg.Address,
 		Handler:           handler,

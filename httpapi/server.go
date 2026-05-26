@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"context"
 	"laughing-goggles/account"
 	"laughing-goggles/gen/api"
 )
@@ -14,9 +15,11 @@ func NewServer(svc AccountsService) *Server {
 }
 
 type AccountsService interface {
-	CreateAccount(CreateAccountParams) (Account, error)
-	GetAccountByID(id int64) (Account, error)
-	CreateTransaction(CreateTransactionParams) error
+	Ping(ctx context.Context) error
+
+	CreateAccount(ctx context.Context, params CreateAccountParams) (Account, error)
+	GetAccountByID(ctx context.Context, accountID int64) (Account, error)
+	CreateTransaction(ctx context.Context, params CreateTransactionParams) error
 }
 
 type CreateAccountParams = account.CreateAccountParams

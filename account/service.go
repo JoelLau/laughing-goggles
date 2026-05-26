@@ -1,19 +1,28 @@
 package account
 
 import (
+	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"laughing-goggles/gen/sqlc"
 
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/shopspring/decimal"
 )
 
 type AccountService struct {
-	accountsByID map[int64]Account
+	pool    *pgxpool.Pool
+	queries *sqlc.Queries
 }
 
-func NewAccountService() *AccountService {
+func NewAccountService(pool *pgxpool.Pool) *AccountService {
 	return &AccountService{
-		accountsByID: make(map[int64]Account),
+		pool:    pool,
+		queries: sqlc.New(pool),
 	}
 }
 
@@ -25,22 +34,74 @@ var (
 	ErrInsufficientBalance       = errors.New("insufficient balance")
 )
 
-func (s *AccountService) CreateAccount(params CreateAccountParams) (Account, error) {
+var microsPerUnit = decimal.NewFromInt(1_000_000)
+
+func fromMicros(micros int64) decimal.Decimal {
+	return decimal.NewFromInt(micros).Div(microsPerUnit)
+}
+
+func toMicros(d decimal.Decimal) int64 {
+	return d.Mul(microsPerUnit).BigInt().Int64()
+}
+
+func (s *AccountService) Ping(ctx context.Context) error {
+	return s.pool.Ping(ctx)
+}
+
+func (s *AccountService) CreateAccount(ctx context.Context, params CreateAccountParams) (Account, error) {
 	if !params.InitialBalance.IsPositive() {
 		return Account{}, ErrInitialBalanceNotPositive
 	}
 
-	if _, ok := s.accountsByID[params.AccountID]; ok {
-		return Account{}, ErrAccountAlreadyExists
+	eventBody, err := json.Marshal(params)
+	if err != nil {
+		return Account{}, err
 	}
 
-	s.accountsByID[params.AccountID] = Account{
-		ID:      params.AccountID,
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return Account{}, err
+	}
+	defer tx.Rollback(ctx)
+
+	qtx := s.queries.WithTx(tx)
+
+	event, err := qtx.CreateEvent(ctx, sqlc.CreateEventParams{
+		Type: "CreateAccount",
+		Data: []byte(eventBody),
+	})
+	if err != nil {
+		return Account{}, err
+	}
+
+	accountID, err := qtx.CreateAccount(ctx, params.AccountID)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
+			return Account{}, ErrAccountAlreadyExists
+		}
+
+		return Account{}, err
+	}
+
+	_, err = qtx.CreateLedgerEntry(ctx, sqlc.CreateLedgerEntryParams{
+		EventID:     event.ID,
+		AccountID:   accountID,
+		AmountMicro: toMicros(params.InitialBalance),
+	})
+	if err != nil {
+		return Account{}, err
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		return Account{}, err
+	}
+
+	return Account{
+		ID:      accountID,
 		Balance: params.InitialBalance,
-	}
-
-	return s.accountsByID[params.AccountID], nil
-
+	}, nil
 }
 
 type CreateAccountParams struct {
@@ -48,38 +109,88 @@ type CreateAccountParams struct {
 	InitialBalance decimal.Decimal
 }
 
-func (s *AccountService) GetAccountByID(id int64) (Account, error) {
-	acc, ok := s.accountsByID[id]
-	if !ok {
+func (s *AccountService) GetAccountByID(ctx context.Context, accountID int64) (Account, error) {
+	row, err := s.queries.GetAccountByID(ctx, accountID)
+	if errors.Is(err, pgx.ErrNoRows) {
 		return Account{}, ErrAccountNotFound
 	}
-	return acc, nil
+	if err != nil {
+		return Account{}, fmt.Errorf("error fetching account by id: %w", err)
+	}
+
+	return Account{
+		ID:      row.AccountID,
+		Balance: fromMicros(row.BalanceMicros),
+	}, nil
 }
 
-func (s *AccountService) CreateTransaction(params CreateTransactionParams) error {
+func (s *AccountService) CreateTransaction(ctx context.Context, params CreateTransactionParams) error {
 	if !params.Amount.IsPositive() {
 		return ErrAmountNotPositive
 	}
 
-	source, sourceOK := s.accountsByID[params.SourceAccountID]
-	if !sourceOK {
-		return fmt.Errorf("%w: %d", ErrAccountNotFound, params.SourceAccountID)
+	eventBody, err := json.Marshal(params)
+	if err != nil {
+		return err
 	}
 
-	if source.Balance.LessThan(params.Amount) {
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	qtx := s.queries.WithTx(tx)
+
+	event, err := qtx.CreateEvent(ctx, sqlc.CreateEventParams{
+		Type: "CreateTransaction",
+		Data: []byte(eventBody),
+	})
+	if err != nil {
+		return err
+	}
+
+	sourceAccount, err := qtx.GetAccountByID(ctx, params.SourceAccountID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ErrAccountNotFound
+	}
+	if err != nil {
+		return err
+	}
+
+	destinationAccount, err := qtx.GetAccountByID(ctx, params.DestinationAccountID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ErrAccountNotFound
+	}
+	if err != nil {
+		return err
+	}
+
+	if fromMicros(sourceAccount.BalanceMicros).LessThan(params.Amount) {
 		return ErrInsufficientBalance
 	}
 
-	destination, destinationOK := s.accountsByID[params.DestinationAccountID]
-	if !destinationOK {
-		return fmt.Errorf("%w: %d", ErrAccountNotFound, params.DestinationAccountID)
+	_, err = qtx.CreateLedgerEntry(ctx, sqlc.CreateLedgerEntryParams{
+		EventID:     event.ID,
+		AccountID:   sourceAccount.AccountID,
+		AmountMicro: -toMicros(params.Amount),
+	})
+	if err != nil {
+		return err
 	}
 
-	source.Balance = source.Balance.Sub(params.Amount)
-	destination.Balance = destination.Balance.Add(params.Amount)
+	_, err = qtx.CreateLedgerEntry(ctx, sqlc.CreateLedgerEntryParams{
+		EventID:     event.ID,
+		AccountID:   destinationAccount.AccountID,
+		AmountMicro: toMicros(params.Amount),
+	})
+	if err != nil {
+		return err
+	}
 
-	s.accountsByID[params.SourceAccountID] = source
-	s.accountsByID[params.DestinationAccountID] = destination
+	if err := tx.Commit(ctx); err != nil {
+		return err
+	}
 
 	return nil
 }

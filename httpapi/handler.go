@@ -17,9 +17,16 @@ func (s *Server) Livez(ctx context.Context, request api.LivezRequestObject) (api
 }
 
 // (GET /readyz)
-//
-// TODO: ping live database
 func (s *Server) Readyz(ctx context.Context, request api.ReadyzRequestObject) (api.ReadyzResponseObject, error) {
+	if err := s.accSvc.Ping(ctx); err != nil {
+		return api.Readyz500JSONResponse{
+			Type:   "https://github.com/JoelLau/laughing-goggles/errors/database-unavailable",
+			Title:  "Service Unavailable",
+			Status: http.StatusInternalServerError,
+			Detail: new("database is not reachable"),
+		}, nil
+	}
+
 	return api.Readyz200JSONResponse{Data: "ok"}, nil
 }
 
@@ -35,7 +42,7 @@ func (s *Server) CreateAccount(ctx context.Context, request api.CreateAccountReq
 		}, nil
 	}
 
-	acc, err := s.accSvc.CreateAccount(CreateAccountParams{
+	acc, err := s.accSvc.CreateAccount(ctx, CreateAccountParams{
 		AccountID:      request.Body.AccountId,
 		InitialBalance: initialBalance,
 	})
@@ -74,7 +81,7 @@ func (s *Server) CreateAccount(ctx context.Context, request api.CreateAccountReq
 
 // (GET /accounts/{account_id})
 func (s *Server) GetAccountByID(ctx context.Context, request api.GetAccountByIDRequestObject) (api.GetAccountByIDResponseObject, error) {
-	acc, err := s.accSvc.GetAccountByID(request.AccountId)
+	acc, err := s.accSvc.GetAccountByID(ctx, request.AccountId)
 	if errors.Is(err, account.ErrAccountNotFound) {
 		return api.GetAccountByID404JSONResponse{
 			Type:   "https://github.com/JoelLau/laughing-goggles/errors/account-not-found",
@@ -110,7 +117,7 @@ func (s *Server) CreateTransaction(ctx context.Context, request api.CreateTransa
 		}, nil
 	}
 
-	err = s.accSvc.CreateTransaction(account.CreateTransactionParams{
+	err = s.accSvc.CreateTransaction(ctx, account.CreateTransactionParams{
 		SourceAccountID:      request.Body.SourceAccountId,
 		DestinationAccountID: request.Body.DestinationAccountId,
 		Amount:               amount,

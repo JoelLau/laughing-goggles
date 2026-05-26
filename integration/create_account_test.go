@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/shopspring/decimal"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -16,7 +17,9 @@ func TestCreateAccount_201Created(t *testing.T) {
 	t.Parallel()
 
 	// Arrange
-	srv := newTestServer(t, account.NewAccountService())
+	pool := testutil.NewTestPgxPool(t)
+	svc := account.NewAccountService(pool)
+	srv := newTestServer(t, svc)
 
 	// Act
 	resp, err := http.Post(
@@ -28,14 +31,16 @@ func TestCreateAccount_201Created(t *testing.T) {
 	defer resp.Body.Close()
 
 	// Assert
-	require.Equal(t, http.StatusCreated, resp.StatusCode)
+	assert.Equal(t, http.StatusCreated, resp.StatusCode)
 }
 
 func TestCreateAccount_400BadRequest_NegativeBalance(t *testing.T) {
 	t.Parallel()
 
 	// Arrange
-	srv := newTestServer(t, account.NewAccountService())
+	pool := testutil.NewTestPgxPool(t)
+	svc := account.NewAccountService(pool)
+	srv := newTestServer(t, svc)
 
 	// Act
 	resp, err := http.Post(
@@ -47,14 +52,16 @@ func TestCreateAccount_400BadRequest_NegativeBalance(t *testing.T) {
 	defer resp.Body.Close()
 
 	// Assert
-	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 }
 
 func TestCreateAccount_400BadRequest_ZeroBalance(t *testing.T) {
 	t.Parallel()
 
 	// Arrange
-	srv := newTestServer(t, account.NewAccountService())
+	pool := testutil.NewTestPgxPool(t)
+	svc := account.NewAccountService(pool)
+	srv := newTestServer(t, svc)
 
 	// Act
 	resp, err := http.Post(
@@ -66,14 +73,16 @@ func TestCreateAccount_400BadRequest_ZeroBalance(t *testing.T) {
 	defer resp.Body.Close()
 
 	// Assert
-	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 }
 
 func TestCreateAccount_400BadRequest_InvalidBalance(t *testing.T) {
 	t.Parallel()
 
 	// Arrange
-	srv := newTestServer(t, account.NewAccountService())
+	pool := testutil.NewTestPgxPool(t)
+	svc := account.NewAccountService(pool)
+	srv := newTestServer(t, svc)
 
 	// Act
 	resp, err := http.Post(
@@ -85,15 +94,17 @@ func TestCreateAccount_400BadRequest_InvalidBalance(t *testing.T) {
 	defer resp.Body.Close()
 
 	// Assert
-	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 }
 
 func TestCreateAccount_409Conflict_DuplicateAccountID(t *testing.T) {
 	t.Parallel()
 
 	// Arrange
-	svc := account.NewAccountService()
-	_, err := svc.CreateAccount(account.CreateAccountParams{AccountID: 123, InitialBalance: decimal.RequireFromString("100.23344")})
+	pool := testutil.NewTestPgxPool(t)
+	svc := account.NewAccountService(pool)
+
+	_, err := svc.CreateAccount(t.Context(), account.CreateAccountParams{AccountID: 123, InitialBalance: decimal.RequireFromString("100.23344")})
 	require.NoError(t, err) // sanity check
 
 	srv := newTestServer(t, svc)
@@ -109,5 +120,5 @@ func TestCreateAccount_409Conflict_DuplicateAccountID(t *testing.T) {
 	defer resp.Body.Close()
 
 	// Assert
-	require.Equal(t, http.StatusConflict, resp.StatusCode)
+	assert.Equal(t, http.StatusConflict, resp.StatusCode)
 }
