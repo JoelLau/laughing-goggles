@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS accounts (
   id BIGINT PRIMARY KEY
 );
 
-COMMENT ON TABLE accounts IS 'source of truth for all things table related';
+COMMENT ON TABLE accounts IS 'registry of all accounts in the system';
 
 COMMENT ON COLUMN accounts.id IS 'unique account identifier; chosen by user';
 

@@ -112,7 +112,7 @@ type CreateAccountParams struct {
 func (s *AccountService) GetAccountByID(ctx context.Context, accountID int64) (Account, error) {
 	row, err := s.queries.GetAccountByID(ctx, accountID)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return Account{}, ErrAccountNotFound
+		return Account{}, fmt.Errorf("%w: %d", ErrAccountNotFound, accountID)
 	}
 	if err != nil {
 		return Account{}, fmt.Errorf("error fetching account by id: %w", err)
@@ -152,7 +152,7 @@ func (s *AccountService) CreateTransaction(ctx context.Context, params CreateTra
 
 	sourceAccount, err := qtx.GetAccountByID(ctx, params.SourceAccountID)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return ErrAccountNotFound
+		return fmt.Errorf("%w: %d", ErrAccountNotFound, params.SourceAccountID)
 	}
 	if err != nil {
 		return err
@@ -160,7 +160,7 @@ func (s *AccountService) CreateTransaction(ctx context.Context, params CreateTra
 
 	destinationAccount, err := qtx.GetAccountByID(ctx, params.DestinationAccountID)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return ErrAccountNotFound
+		return fmt.Errorf("%w: %d", ErrAccountNotFound, params.DestinationAccountID)
 	}
 	if err != nil {
 		return err
