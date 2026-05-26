@@ -20,7 +20,7 @@ func main() {
 	logr := cfg.Logger()
 	logr.InfoContext(ctx, "starting ..")
 
-	pool, err := pgxpool.New(ctx, cfg.Address)
+	pool, err := pgxpool.New(ctx, cfg.PostgresDSN())
 	if err != nil {
 		logr.ErrorContext(ctx, "failed to connect to database", slog.Any("error", err))
 		return
