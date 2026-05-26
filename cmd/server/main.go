@@ -2,41 +2,56 @@ package main
 
 import (
 	"context"
+	"errors"
 	"laughing-goggles/account"
 	"laughing-goggles/config"
 	"laughing-goggles/httpapi"
 	"log/slog"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// TODO: handle SIGTERM, SIGKILL
 func main() {
-	ctx := context.Background()
-	cfg := config.Init()
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 
+	cfg := config.Init()
 	logr := cfg.Logger()
-	logr.InfoContext(ctx, "starting ..")
+	logr.InfoContext(ctx, "starting..")
 
 	pool, err := pgxpool.New(ctx, cfg.PostgresDSN())
 	if err != nil {
-		logr.ErrorContext(ctx, "failed to connect to database", slog.Any("error", err))
+		logr.ErrorContext(ctx, "failed to create db pool", slog.Any("error", err))
 		return
 	}
+	defer pool.Close()
 
-	svc := account.NewAccountService(pool)
-	handler := httpapi.NewHandler(logr, svc)
-	server := &http.Server{
-		Addr:              cfg.Address,
-		Handler:           handler,
-		ReadHeaderTimeout: 10 * time.Second,
+	srv := &http.Server{
+		Handler:     httpapi.NewHandler(logr, account.NewAccountService(pool)),
+		Addr:        cfg.Address,
+		ReadTimeout: 10 * time.Second,
 	}
 
-	if err := server.ListenAndServe(); err != nil {
-		logr.ErrorContext(ctx, "server error", slog.Any("error", err))
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			logr.ErrorContext(ctx, "unexpected server shutdown", slog.Any("error", err))
+		}
+	}()
+
+	<-ctx.Done()
+	stop()
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		logr.ErrorContext(shutdownCtx, "server shutdown error", slog.Any("error", err))
 	}
 
-	logr.InfoContext(ctx, "stopping ..")
+	logr.InfoContext(shutdownCtx, "exiting..")
 }
