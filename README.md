@@ -3,6 +3,8 @@
 highly inspired by previous projects [user-analytics-service](https://github.com/JoelLau/user-analytics-service/)
 and [personal-accounting](https://github.com/JoelLau/personal-accounting)
 
+## Intructions to install, setup , run
+
 ## Pre-requisites
 
 1. [docker](https://www.docker.com/products/docker-desktop/)
@@ -11,7 +13,7 @@ and [personal-accounting](https://github.com/JoelLau/personal-accounting)
 1. [optional] [goose](https://github.com/pressly/goose)
 1. [optional] [sqlc](https://sqlc.dev/)
 
-## Running this project
+### Instructions
 
 These are the recommended instructions for running this project
 on a unix-like machine (e.g. macOS, Linux).
@@ -47,3 +49,7 @@ on a unix-like machine (e.g. macOS, Linux).
 | `go run cmd/server/main.go` | starts transfers service REST API server |
 | `go test ./...` | run tests (requires docker) |
 | `go generate ./...` | code generation - sql helpers, openapi interfaces |
+
+## Assumptions
+
+the assumptions i've made while implementing this project have been documented in [/docs](/docs)
