@@ -1,5 +1,8 @@
 # laughing-goggles
 
+highly inspired by previous projects [user-analytics-service](https://github.com/JoelLau/user-analytics-service/)
+and [personal-accounting](https://github.com/JoelLau/personal-accounting)
+
 ## Pre-requisites
 
 1. [docker](https://www.docker.com/products/docker-desktop/)
@@ -31,7 +34,6 @@ on a unix-like machine (e.g. macOS, Linux).
     1. click the "Try it out" button on the corresponding endpoint
     1. modify the parameters
     1. click execute to see results
-
 
 ## Commands
 
